@@ -20,10 +20,8 @@ import {
   chatIcon,
   readIcon
 } from '@jupyter/chat';
-import {
-  ICollaborativeDrive,
-  SharedDocumentFactory
-} from '@jupyter/collaborative-drive';
+import { ICollaborativeContentProvider } from '@jupyter/collaborative-drive';
+import { SharedDocumentFactory } from '@jupyterlab/services';
 import {
   ILayoutRestorer,
   JupyterFrontEnd,
@@ -113,7 +111,7 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
     IActiveCellManagerToken,
     IAttachmentOpenerRegistry,
     IChatCommandRegistry,
-    ICollaborativeDrive,
+    ICollaborativeContentProvider,
     IDefaultFileBrowser,
     IInputToolbarRegistryFactory,
     ILayoutRestorer,
@@ -131,7 +129,7 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
     activeCellManager: IActiveCellManager | null,
     attachmentOpenerRegistry: IAttachmentOpenerRegistry,
     chatCommandRegistry: IChatCommandRegistry,
-    drive: ICollaborativeDrive | null,
+    drive: ICollaborativeContentProvider | null,
     filebrowser: IDefaultFileBrowser | null,
     inputToolbarFactory: IInputToolbarRegistryFactory,
     restorer: ILayoutRestorer | null,
@@ -172,11 +170,11 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
         previousDirectory &&
         previousDirectory !== currentDirectory
       ) {
-        drive
+        app.serviceManager.contents
           .get(previousDirectory)
           .then(contentModel => {
             if (contentModel.content.length === 0) {
-              drive.delete(previousDirectory).catch(e => {
+              app.serviceManager.contents.delete(previousDirectory).catch(e => {
                 // no-op, the directory might not be empty
               });
             }
@@ -191,18 +189,18 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
         Promise.resolve(null);
 
       if (drive && currentDirectory && previousDirectory !== currentDirectory) {
-        directoryCreation = drive
+        directoryCreation = app.serviceManager.contents
           .get(currentDirectory, { content: false })
           .catch(async () => {
-            return drive
+            return app.serviceManager.contents
               .newUntitled({
                 type: 'directory'
               })
               .then(async contentModel => {
-                return drive
+                return app.serviceManager.contents
                   .rename(contentModel.path, currentDirectory)
                   .catch(e => {
-                    drive.delete(contentModel.path);
+                    app.serviceManager.contents.delete(contentModel.path);
                     throw new Error(e);
                   });
               })
@@ -360,7 +358,7 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
   id: pluginIds.chatCommands,
   description: 'The commands to create or open a chat.',
   autoStart: true,
-  requires: [ICollaborativeDrive, IChatFactory],
+  requires: [ICollaborativeContentProvider, IChatFactory],
   optional: [
     IActiveCellManagerToken,
     IChatPanel,
@@ -371,7 +369,7 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
   ],
   activate: (
     app: JupyterFrontEnd,
-    drive: ICollaborativeDrive,
+    drive: ICollaborativeContentProvider,
     factory: IChatFactory,
     activeCellManager: IActiveCellManager | null,
     chatPanel: ChatPanel | null,
@@ -430,9 +428,11 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
 
         let fileExist = true;
         if (filepath) {
-          await drive.get(filepath, { content: false }).catch(() => {
-            fileExist = false;
-          });
+          await app.serviceManager.contents
+            .get(filepath, { content: false })
+            .catch(() => {
+              fileExist = false;
+            });
         } else {
           fileExist = false;
         }
@@ -440,13 +440,17 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
         // Create a new file if it does not exists
         if (!fileExist) {
           // Create a new untitled chat.
-          let model: Contents.IModel | null = await drive.newUntitled({
-            type: 'file',
-            ext: chatFileType.extensions[0]
-          });
+          let model: Contents.IModel | null =
+            await app.serviceManager.contents.newUntitled({
+              type: 'file',
+              ext: chatFileType.extensions[0]
+            });
           // Rename it if a name has been provided.
           if (filepath) {
-            model = await drive.rename(model.path, filepath);
+            model = await app.serviceManager.contents.rename(
+              model.path,
+              filepath
+            );
           }
 
           if (!model) {
@@ -549,9 +553,11 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
             }
 
             let fileExist = true;
-            await drive.get(filepath, { content: false }).catch(() => {
-              fileExist = false;
-            });
+            await app.serviceManager.contents
+              .get(filepath, { content: false })
+              .catch(() => {
+                fileExist = false;
+              });
 
             if (!fileExist) {
               showErrorMessage(
@@ -585,7 +591,7 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
                 return;
               }
 
-              const model = await drive.get(filepath);
+              const model = await app.serviceManager.contents.get(filepath);
 
               // Create a share model from the chat file
               const sharedModel = drive.sharedModelFactory.createNew({
@@ -664,7 +670,7 @@ const chatPanel: JupyterFrontEndPlugin<ChatPanel> = {
   description: 'The chat panel widget.',
   autoStart: true,
   provides: IChatPanel,
-  requires: [IChatFactory, ICollaborativeDrive, IRenderMimeRegistry],
+  requires: [IChatFactory, ICollaborativeContentProvider, IRenderMimeRegistry],
   optional: [
     IAttachmentOpenerRegistry,
     IChatCommandRegistry,
@@ -676,7 +682,7 @@ const chatPanel: JupyterFrontEndPlugin<ChatPanel> = {
   activate: (
     app: JupyterFrontEnd,
     factory: IChatFactory,
-    drive: ICollaborativeDrive,
+    drive: ICollaborativeContentProvider,
     rmRegistry: IRenderMimeRegistry,
     attachmentOpenerRegistry: IAttachmentOpenerRegistry,
     chatCommandRegistry: IChatCommandRegistry,
@@ -695,6 +701,7 @@ const chatPanel: JupyterFrontEndPlugin<ChatPanel> = {
     const chatPanel = new ChatPanel({
       commands,
       drive,
+      contentsManager: app.serviceManager.contents,
       rmRegistry,
       themeManager,
       defaultDirectory,
