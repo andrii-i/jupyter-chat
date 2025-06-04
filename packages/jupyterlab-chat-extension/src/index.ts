@@ -21,7 +21,6 @@ import {
   readIcon
 } from '@jupyter/chat';
 import { ICollaborativeContentProvider } from '@jupyter/collaborative-drive';
-import { SharedDocumentFactory } from '@jupyterlab/services';
 import {
   ILayoutRestorer,
   JupyterFrontEnd,
@@ -47,7 +46,7 @@ import { Contents } from '@jupyterlab/services';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { launchIcon } from '@jupyterlab/ui-components';
-import { PromiseDelegate } from '@lumino/coreutils';
+import { PromiseDelegate, Token } from '@lumino/coreutils';
 import {
   ChatPanel,
   ChatWidgetFactory,
@@ -67,8 +66,16 @@ import {
 import { chatCommandRegistryPlugin } from './chat-commands/plugins';
 import { emojiCommandsPlugin } from './chat-commands/providers/emoji';
 import { mentionCommandsPlugin } from './chat-commands/providers/user-mention';
+import { DocumentChange, YDocument } from '@jupyter/ydoc';
 
 const FACTORY = 'Chat';
+
+// Cast ICollaborativeContentProvider token to Token<any> for JupyterLab compatibility.
+// Safe because different @lumino/coreutils versions create separate Token types with
+// private '_tokenStructuralPropertyT' properties. Tokens are just dependency injection
+// identifiers, the actual ICollaborativeContentProvider instance works correctly.
+const ICollaborativeContentProviderToken =
+  ICollaborativeContentProvider as unknown as Token<any>;
 
 const pluginIds = {
   activeCellManager: 'jupyterlab-chat-extension:activeCellManager',
@@ -111,7 +118,7 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
     IActiveCellManagerToken,
     IAttachmentOpenerRegistry,
     IChatCommandRegistry,
-    ICollaborativeContentProvider,
+    ICollaborativeContentProviderToken,
     IDefaultFileBrowser,
     IInputToolbarRegistryFactory,
     ILayoutRestorer,
@@ -265,8 +272,12 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
     app.docRegistry.addFileType(chatFileType);
 
     if (drive) {
-      const chatFactory: SharedDocumentFactory = () => {
-        return YChat.create();
+      // Cast YChat (YDocument<IChatChanges>) to YDocument<DocumentChange> for SharedDocumentFactory.
+      // Safe because IChatChanges extends DocumentChange, so YChat has all required functionality.
+      // TypeScript's generic invariance prevents YDocument<Subtype> from being assigned to
+      // YDocument<Supertype>, requiring this cast.
+      const chatFactory = () => {
+        return YChat.create() as unknown as YDocument<DocumentChange>;
       };
       drive.sharedModelFactory.registerDocumentFactory('chat', chatFactory);
     }
@@ -358,7 +369,7 @@ const chatCommands: JupyterFrontEndPlugin<void> = {
   id: pluginIds.chatCommands,
   description: 'The commands to create or open a chat.',
   autoStart: true,
-  requires: [ICollaborativeContentProvider, IChatFactory],
+  requires: [ICollaborativeContentProviderToken, IChatFactory],
   optional: [
     IActiveCellManagerToken,
     IChatPanel,
@@ -670,7 +681,11 @@ const chatPanel: JupyterFrontEndPlugin<ChatPanel> = {
   description: 'The chat panel widget.',
   autoStart: true,
   provides: IChatPanel,
-  requires: [IChatFactory, ICollaborativeContentProvider, IRenderMimeRegistry],
+  requires: [
+    IChatFactory,
+    ICollaborativeContentProviderToken,
+    IRenderMimeRegistry
+  ],
   optional: [
     IAttachmentOpenerRegistry,
     IChatCommandRegistry,
@@ -700,7 +715,6 @@ const chatPanel: JupyterFrontEndPlugin<ChatPanel> = {
      */
     const chatPanel = new ChatPanel({
       commands,
-      drive,
       contentsManager: app.serviceManager.contents,
       rmRegistry,
       themeManager,
