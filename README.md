@@ -1,7 +1,7 @@
 # jupyter-chat
 
-[![Github Actions Status](https://github.com/jupyterlab/jupyter-chat/workflows/Build/badge.svg)](https://github.com/jupyterlab/jupyter-chat/actions/workflows/build.yml)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyterlab/jupyter-chat/main?urlpath=lab)
+[![Github Actions Status](https://github.com/jupyter-ai-contrib/jupyter-chat/workflows/Build/badge.svg)](https://github.com/jupyter-ai-contrib/jupyter-chat/actions/workflows/build.yml)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyter-ai-contrib/jupyter-chat/main?urlpath=lab)
 
 This project is a monorepo containing:
 
@@ -10,7 +10,7 @@ This project is a monorepo containing:
 
 Many components of this chat project come from [jupyter-ai](https://github.com/jupyterlab/jupyter-ai).
 
-![a screenshot showing the jupyter-chat extension used in two browser windows](https://github.com/jupyterlab/jupyter-chat/assets/591645/5dac0b00-43ed-4458-ab67-18207644b92b)
+![a screenshot showing the jupyter-chat extension used in two browser windows](https://github.com/jupyter-ai-contrib/jupyter-chat/assets/591645/5dac0b00-43ed-4458-ab67-18207644b92b)
 
 > [!WARNING]
 > This project is still in early development stage and its API may change often before

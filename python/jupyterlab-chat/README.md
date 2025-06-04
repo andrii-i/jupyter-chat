@@ -1,6 +1,6 @@
 # jupyterlab_chat
 
-[![Github Actions Status](https://github.com/jupyterlab/jupyter-chat/workflows/Build/badge.svg)](https://github.com/jupyterlab/jupyter-chat/actions/workflows/build.yml)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyterlab/jupyter-chat/main?urlpath=lab)
+[![Github Actions Status](https://github.com/jupyter-ai-contrib/jupyter-chat/workflows/Build/badge.svg)](https://github.com/jupyter-ai-contrib/jupyter-chat/actions/workflows/build.yml)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyter-ai-contrib/jupyter-chat/main?urlpath=lab)
 
 A chat extension based on shared documents.
 
