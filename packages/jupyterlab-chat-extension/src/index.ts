@@ -70,10 +70,12 @@ import { DocumentChange, YDocument } from '@jupyter/ydoc';
 
 const FACTORY = 'Chat';
 
-// Cast ICollaborativeContentProvider token to Token<any> for JupyterLab compatibility.
-// Safe because different @lumino/coreutils versions create separate Token types with
-// private '_tokenStructuralPropertyT' properties. Tokens are just dependency injection
-// identifiers, the actual ICollaborativeContentProvider instance works correctly.
+// Cast ICollaborativeContentProvider token so TypeScript accepts it in plugin optional/requires arrays.
+// The arrays expect Token<any> from JupyterLab's @lumino/coreutils, but our token is from
+// @jupyter/collaborative-drive's @lumino/coreutils. These have separate Token class declarations
+// with their own private '_tokenStructuralPropertyT' properties, making TypeScript treat them as
+// distinct incompatible types even though they work identically. This is safe because tokens are just
+// dependency injection identifiers - the actual ICollaborativeContentProvider instance works correctly.
 const ICollaborativeContentProviderToken =
   ICollaborativeContentProvider as unknown as Token<any>;
 
@@ -272,10 +274,11 @@ const docFactories: JupyterFrontEndPlugin<IChatFactory> = {
     app.docRegistry.addFileType(chatFileType);
 
     if (drive) {
-      // Cast YChat (YDocument<IChatChanges>) to YDocument<DocumentChange> for SharedDocumentFactory.
-      // Safe because IChatChanges extends DocumentChange, so YChat has all required functionality.
-      // TypeScript's generic invariance prevents YDocument<Subtype> from being assigned to
-      // YDocument<Supertype>, requiring this cast.
+      // Cast YChat return type to match SharedDocumentFactory's expected return type.
+      // SharedDocumentFactory expects YDocument<DocumentChange>, but YChat.create() returns
+      // YDocument<IChatChanges>. Since IChatChanges extends DocumentChange, the cast is valid.
+      // TypeScript's generic invariance requires the cast as YDocument<Subtype> isn't assignable
+      // to YDocument<Supertype> even when Subtype extends Supertype.
       const chatFactory = () => {
         return YChat.create() as unknown as YDocument<DocumentChange>;
       };
